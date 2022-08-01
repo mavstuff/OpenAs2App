@@ -15,10 +15,7 @@ import org.openas2.params.RandomParameters;
 import org.openas2.processor.receiver.AS2ReceiverModule;
 import org.openas2.util.DispositionType;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Map;
@@ -35,7 +32,27 @@ public class MessageFileModule extends BaseStorageModule {
             File msgFile = getFile(msg, getParameter(PARAM_FILENAME, true), action);
             InputStream in = msg.getData().getInputStream();
             store(msgFile, in);
-            logger.info("stored message to " + msgFile.getAbsolutePath() + msg.getLogMsgID());
+
+            String strMsgFrom = msg.getHeader("AS2-From");
+
+            logger.info("stored message from "+strMsgFrom+ " to " + msgFile.getAbsolutePath() + msg.getLogMsgID());
+
+            if (strMsgFrom != null && strMsgFrom.equals("PETCOPRODAS2"))
+            {
+                String sproc = "c:\\Schedulers\\GoTagsPetco\\GoTagsPetco.exe " + msgFile.getAbsolutePath();
+                logger.info("BEGIN RUN PROCESS " + sproc);
+                Process p1 = Runtime.getRuntime().exec(sproc);
+                BufferedReader stdInput = new BufferedReader(new
+                    InputStreamReader(p1.getInputStream()));
+                logger.info("StdOut of the command:\n");
+                String s = null;
+                while ((s = stdInput.readLine()) != null) {
+                    logger.info(s);
+                }
+                p1.waitFor();
+                logger.info("END RUN PROCESS");
+            }
+
         } catch (Exception e) {
             throw new DispositionException(new DispositionType("automatic-action", "MDN-sent-automatically", "processed", "Error", "Error storing transaction"), AS2ReceiverModule.DISP_STORAGE_FAILED, e);
         }
